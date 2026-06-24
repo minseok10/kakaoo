@@ -12,10 +12,10 @@
 설정 우선순위:  명령줄 인수  >  환경변수(.env/셸)  >  톡방 config.env  >  내장 기본값
 
 사용 예:
-    python3 kakao_bot.py --target "롤로롤리린이"              # 한 사이클
-    python3 kakao_bot.py --target "롤로롤리린이" --loop       # 지속 가동
-    python3 kakao_bot.py --target "롤로롤리린이" --no-dry-run --context-limit 50 --poll-seconds 8
-    DRY_RUN=true TARGET="롤로롤리린이" python3 kakao_bot.py    # 환경변수로도 가능
+    python3 kakao_bot.py --target "내톡방"              # 한 사이클
+    python3 kakao_bot.py --target "내톡방" --loop       # 지속 가동
+    python3 kakao_bot.py --target "내톡방" --no-dry-run --context-limit 50 --poll-seconds 8
+    DRY_RUN=true TARGET="내톡방" python3 kakao_bot.py    # 환경변수로도 가능
 
 킬 스위치: 디렉토리에 STOP 파일(전체) 또는 rooms/<톡방>/STOP(해당 톡방만)이 있으면 종료.
 """
@@ -35,7 +35,7 @@ GLOBAL_STOP = os.path.join(HERE, "STOP")
 
 # 내장 기본값
 DEFAULTS = {
-    "TARGET": "롤로롤리린이",
+    "TARGET": "내톡방",
     "MODEL": "claude-opus-4-8",
     "DRY_RUN": True,        # 안전 기본값. 실제 전송하려면 false 로.
     "USE_SELF": False,      # true면 전송을 자기채팅으로 (읽기는 TARGET)

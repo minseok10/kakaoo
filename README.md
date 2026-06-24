@@ -142,7 +142,7 @@ python3 kakao_bot.py --target "톡방이름" --no-dry-run --use-self --loop
 
 | 키 / 인수 | 기본값 | 설명 |
 |---|---|---|
-| `TARGET` / `--target` | 롤로롤리린이 | 톡방 이름(부분일치) 또는 chat-id |
+| `TARGET` / `--target` | 내톡방 | 톡방 이름(부분일치) 또는 chat-id |
 | `DRY_RUN` / `--dry-run`,`--no-dry-run` | true | 초안만 vs 실제 전송 |
 | `USE_SELF` / `--use-self` | false | 읽기는 TARGET, 전송은 '나와의 채팅'으로 |
 | `MODEL` / `--model` | claude-opus-4-8 | 사용 모델 |
@@ -208,4 +208,4 @@ python3 update_style.py --target "톡방이름" --my-messages 200 --pairs 30
 
 ## 📄 라이선스
 
-개인 실험용 프로젝트입니다. 자유롭게 참고하되, 사용에 따른 책임은 사용자에게 있습니다.
+[MIT License](LICENSE). 자유롭게 참고·수정·재배포할 수 있으나, 사용에 따른 책임은 사용자에게 있습니다.

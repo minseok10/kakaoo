@@ -9,8 +9,8 @@
 자주 돌릴 필요는 없다. 가끔(주 1회 등) 돌려서 톡방별 말투를 최신화하면 된다.
 
 사용:
-    python3 update_style.py --target "롤로롤리린이"
-    python3 update_style.py --target "롤로롤리린이" --my-messages 200 --pairs 30
+    python3 update_style.py --target "내톡방"
+    python3 update_style.py --target "내톡방" --my-messages 200 --pairs 30
     # cron/launchd로 주기 실행도 가능
 
 설정 우선순위 / .env 로딩은 kakao_bot 과 동일(헬퍼 재사용).
