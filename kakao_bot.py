@@ -131,16 +131,18 @@ def log(cfg, event, **fields):
 
 
 def load_state(cfg):
-    if os.path.exists(cfg.state_path):
-        with open(cfg.state_path, encoding="utf-8") as f:
-            return json.load(f)
-    return {
+    # 구버전 state.json에 없는 키는 기본값으로 채운다
+    state = {
         "last_processed_id": 0,
         "responded_ids": [],
         "sent_ids": [],
         "last_sent_ts": None,
         "sent_timestamps": [],
     }
+    if os.path.exists(cfg.state_path):
+        with open(cfg.state_path, encoding="utf-8") as f:
+            state.update(json.load(f))
+    return state
 
 
 def save_state(cfg, state):
@@ -176,7 +178,7 @@ def resolve_chat(target):
             if target in (rest, name):              # 정확 매칭 우선
                 return cid, target
             if partial is None and target in rest:  # 부분 매칭은 첫 건만 보관
-                partial = (cid, target)
+                partial = (cid, name)               # 전송은 방 전체 이름으로
     if partial:
         return partial
     raise RuntimeError(f"TARGET '{target}' 채팅을 찾지 못함")
@@ -371,7 +373,8 @@ def run_cycle(client, cfg, system_prompt, state):
         save_state(cfg, state)
         return "ok"
 
-    delay = random.randint(cfg.delay_min, cfg.delay_max)
+    delay = random.randint(min(cfg.delay_min, cfg.delay_max),
+                           max(cfg.delay_min, cfg.delay_max))
     log(cfg, "WAIT", seconds=delay)
     time.sleep(delay)
     if stop_requested(cfg):
