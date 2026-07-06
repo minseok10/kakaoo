@@ -200,16 +200,13 @@ def read_text_file(path):
 
 
 def make_anthropic_client(**kwargs):
-    """Anthropic SDK client. OPENROUTER_API_KEY가 있으면 OpenRouter Anthropic API로 라우팅."""
+    """Anthropic SDK를 OpenRouter Anthropic API로 라우팅한다. OpenRouter 전용."""
     import anthropic
-    openrouter_key = os.environ.get("OPENROUTER_API_KEY")
-    if openrouter_key:
-        return anthropic.Anthropic(
-            base_url=os.environ.get("ANTHROPIC_BASE_URL", "https://openrouter.ai/api"),
-            auth_token=openrouter_key,
-            **kwargs,
-        )
-    return anthropic.Anthropic(**kwargs)
+    return anthropic.Anthropic(
+        base_url=os.environ.get("ANTHROPIC_BASE_URL", "https://openrouter.ai/api"),
+        auth_token=os.environ["OPENROUTER_API_KEY"],
+        **kwargs,
+    )
 
 
 def build_system_prompt(style, examples):
@@ -450,8 +447,8 @@ def build_arg_parser():
 def main():
     args = build_arg_parser().parse_args()
 
-    if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")):
-        print("ERROR: OPENROUTER_API_KEY 또는 ANTHROPIC_API_KEY 가 필요합니다 (.env 또는 환경변수).", file=sys.stderr)
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        print("ERROR: OPENROUTER_API_KEY 가 필요합니다 (.env 또는 환경변수).", file=sys.stderr)
         sys.exit(1)
 
     cfg = Config(args)

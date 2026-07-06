@@ -78,7 +78,7 @@ pip install anthropic
 
 # 2) 환경 설정
 cp .env.example .env
-#   .env 를 열어 ANTHROPIC_API_KEY 와 TARGET(톡방 이름) 입력
+#   .env 를 열어 OPENROUTER_API_KEY 와 TARGET(톡방 이름) 입력
 #   처음엔 DRY_RUN=true 로 두세요 (실제 전송 안 함)
 
 # 3) 말투 프로파일 생성 — 그 톡방에서 내가 친 메시지로 STYLE.md/examples.txt 자동 생성
@@ -188,7 +188,7 @@ python3 update_style.py --target "톡방이름" --my-messages 200 --pairs 30
 
 | 증상 | 원인 / 해결 |
 |---|---|
-| `ANTHROPIC_API_KEY 가 필요합니다` | `.env`에 키를 넣었는지 확인. VS Code라면 환경변수 주입 설정 영향일 수 있음 — 셸에서 직접 실행해보기 |
+| `OPENROUTER_API_KEY 가 필요합니다` | `.env`에 키를 넣었는지 확인. VS Code라면 환경변수 주입 설정 영향일 수 있음 — 셸에서 직접 실행해보기 |
 | 전송이 안 되고 `not found in the chat list` | kakaocli가 접근성 트리에서 톡방 이름을 못 찾는 경우. 카카오톡 버전에 따라 이름이 담긴 AX 노드 식별자가 바뀜 → `kakaocli inspect`로 확인 후 kakaocli 소스(`findChatRow`) 점검 |
 | 전송 시 `launching` 상태로 실패 | 카카오톡 앱이 메인(로그인) 화면이어야 함. 재로그인 후 재시도 |
 | `OverloadedError: 529` | Anthropic 서버 일시 과부하. 코드 버그 아님 — 자동 재시도되며 루프 모드는 다음 사이클에 복구 |

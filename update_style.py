@@ -147,8 +147,8 @@ def main():
     p.add_argument("--model", default=os.environ.get("STYLE_MODEL", kb.DEFAULTS["STYLE_MODEL"]))
     args = p.parse_args()
 
-    if not (os.environ.get("OPENROUTER_API_KEY") or os.environ.get("ANTHROPIC_API_KEY")):
-        print("ERROR: OPENROUTER_API_KEY 또는 ANTHROPIC_API_KEY 가 필요합니다.", file=sys.stderr)
+    if not os.environ.get("OPENROUTER_API_KEY"):
+        print("ERROR: OPENROUTER_API_KEY 가 필요합니다.", file=sys.stderr)
         sys.exit(1)
 
     target = args.target or os.environ.get("TARGET", kb.DEFAULTS["TARGET"])
