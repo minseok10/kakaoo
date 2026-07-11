@@ -34,6 +34,22 @@ def infer_name(msgs):
     return names.most_common(1)[0][0] if names else ""
 
 
+def sanitize_names(raw, max_names=12, max_len=40):
+    """LLM이 뽑은 이름/별명 정리 — 개행·제어문자·구분자(,) 분리·제거, 길이·개수 제한, 중복 제거.
+    (대화 내용을 거친 LLM 출력이므로 config.env 키 주입·비정상 값 방지)"""
+    seen, out = set(), []
+    for r in raw or []:
+        for piece in str(r).replace(",", "\n").split("\n"):
+            n = "".join(ch for ch in piece if ord(ch) >= 0x20 and ch != "\x7f")
+            n = " ".join(n.split()).strip()
+            if n and "=" not in n and len(n) <= max_len and n not in seen:
+                seen.add(n)
+                out.append(n)
+                if len(out) >= max_names:
+                    return out
+    return out
+
+
 def infer_name_for_target(target, fetch_limit=400):
     """톡방 이름/ID로 메시지를 조금 읽어 내 표시이름을 추론한다(메뉴 미리보기용)."""
     chat_id, _ = kb.resolve_chat(target)
@@ -246,6 +262,9 @@ def main():
     stats = compute_stats(texts)
     client = kb.make_anthropic_client()
 
+    # ── API 호출을 먼저 모두 끝낸다 ──────────────────────────────────
+    # (이름 저장 후 STYLE 생성이 실패하면 '새 이름 + 옛 STYLE'로 정보가 섞이므로,
+    #  모든 LLM 결과를 확보한 뒤에만 파일을 기록한다.)
     # 이름·별명·프로필을 대화에서 추출(Opus). 톡방마다 호칭이 다르므로 톡방별로 저장한다.
     display_name = infer_name(all_msgs)  # sender 기반 표시이름(힌트·폴백)
     try:
@@ -254,35 +273,32 @@ def main():
         print(f"이름·프로필 LLM 추출 실패({e}) — 표시이름만 사용.", file=sys.stderr)
         identity = {"names": [display_name] if display_name else [],
                     "primary_name": display_name, "profile": ""}
-    names = [n.strip() for n in identity.get("names", []) if n and n.strip()]
-    primary = (args.name or identity.get("primary_name") or display_name or "").strip()
+    names = sanitize_names(identity.get("names"))
+    primary_raw = args.name or identity.get("primary_name") or display_name or ""
+    primary = (sanitize_names([primary_raw], max_names=1) or [""])[0]
     if primary and primary not in names:
         names.insert(0, primary)
-    names = list(dict.fromkeys(names))  # 중복 제거(순서 유지)
-    profile = (identity.get("profile") or "").strip()
-
-    cfgpath = os.path.join(room_dir, "config.env")
-    if primary:
-        kb.update_config_value(cfgpath, "BOT_NAME", primary)
-    if names:
-        kb.update_config_value(cfgpath, "BOT_ALIASES", ", ".join(names))
-    print("봇 이름: " + (primary or "(미설정)")
-          + (f" · 이름/별명: {', '.join(names)}" if names else "")
-          + (" (직접 지정)" if args.name else " (대화에서 자동 추출)"))
+    names = names[:12]
+    profile = (identity.get("profile") or "").strip()[:2000]
 
     print("STYLE.md 생성 중...")
-    style_body = generate_style(client, args.model, stats, texts[-120:])
+    try:
+        style_body = generate_style(client, args.model, stats, texts[-120:])
+    except Exception as e:
+        print(f"STYLE.md 생성 실패: {e} — 아무것도 변경하지 않았습니다.", file=sys.stderr)
+        sys.exit(1)
+    pairs = build_pairs(all_msgs, mine_ids, args.pairs)  # API 호출 아님
+
+    # ── 여기부터 파일 기록 (모든 API 결과 확보 후, 원자적 교체) ──────────
     profile_section = "## 프로필 · 호칭 (자동 추출)\n\n"
     if names:
         profile_section += f"- 이 톡방에서 불리는 이름/별명: {', '.join(names)}\n"
     if profile:
         profile_section += f"\n{profile}\n"
     style_md = profile_section + "\n---\n\n" + style_body
-    with open(style_path, "w", encoding="utf-8") as f:
-        f.write(style_md + "\n")
+    kb.write_text_atomic(style_path, style_md + "\n")
     print(f"  → {style_path}")
 
-    pairs = build_pairs(all_msgs, mine_ids, args.pairs)
     lines = [
         '# examples.txt — "직전 메시지 → 내 답장" 대화 쌍',
         "# (update_style.py 자동 생성. 봇 발화 제외, 내가 직접 친 답장만)",
@@ -292,9 +308,18 @@ def main():
         lines.append(f"상대> {prev}")
         lines.append(f"나> {reply}")
         lines.append("")
-    with open(examples_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+    kb.write_text_atomic(examples_path, "\n".join(lines))
     print(f"  → {examples_path} ({len(pairs)} 쌍)")
+
+    # 이름·별명은 STYLE 저장이 끝난 뒤 마지막에 기록(불일치 창 최소화, 키 주입 방어)
+    cfgpath = os.path.join(room_dir, "config.env")
+    if primary:
+        kb.update_config_value(cfgpath, "BOT_NAME", primary)
+    if names:
+        kb.update_config_value(cfgpath, "BOT_ALIASES", ", ".join(names))
+    print("봇 이름: " + (primary or "(미설정)")
+          + (f" · 이름/별명: {', '.join(names)}" if names else "")
+          + (" (직접 지정)" if args.name else " (대화에서 자동 추출)"))
     print("완료. 다음 봇 실행부터 갱신된 말투가 적용됩니다.")
 
 

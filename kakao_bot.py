@@ -20,6 +20,7 @@
 킬 스위치: 디렉토리에 STOP 파일(전체) 또는 rooms/<톡방>/STOP(해당 톡방만)이 있으면 종료.
 """
 import os
+import re
 import sys
 import json
 import time
@@ -223,8 +224,32 @@ def read_text_file(path):
     return ""
 
 
+CONFIG_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def write_text_atomic(path, text):
+    """임시 파일에 쓰고 원자적으로 교체(부분 기록·손상 방지)."""
+    d = os.path.dirname(path)
+    if d:
+        os.makedirs(d, exist_ok=True)
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.replace(tmp, path)
+
+
+def sanitize_config_value(value):
+    """config.env 값의 '한 줄' 불변식 보장 — 개행/제어문자 제거(키 주입 방지)."""
+    return re.sub(r"[\x00-\x1f\x7f]", " ", str(value)).strip()
+
+
 def update_config_value(path, key, value):
-    """config.env 파일에서 key 를 갱신(없으면 추가). 주석·다른 키는 보존한다."""
+    """config.env 파일에서 key 를 갱신(없으면 추가). 주석·다른 키는 보존한다.
+    key 형식을 검증하고 value의 개행/제어문자를 제거해, LLM/외부 입력이 별도 키를
+    주입하지 못하게 막는다(예: value='민석\\nDRY_RUN=false' 방어)."""
+    if not CONFIG_KEY_RE.match(key):
+        raise ValueError(f"잘못된 config 키: {key!r}")
+    value = sanitize_config_value(value)
     d = os.path.dirname(path)
     if d:
         os.makedirs(d, exist_ok=True)
@@ -240,8 +265,7 @@ def update_config_value(path, key, value):
                     lines.append(line if line.endswith("\n") else line + "\n")
     if not found:
         lines.append(f"{key}={value}\n")
-    with open(path, "w", encoding="utf-8") as f:
-        f.writelines(lines)
+    write_text_atomic(path, "".join(lines))
 
 
 def make_anthropic_client(**kwargs):
