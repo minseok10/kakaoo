@@ -390,6 +390,20 @@ def stop_requested(cfg):
     return os.path.exists(GLOBAL_STOP) or os.path.exists(cfg.room_stop)
 
 
+def bot_sent_ids(before_msgs, after_msgs, sent_count):
+    """전송 후 '봇이 방금 보낸' is_from_me id만 골라낸다.
+    사이클 시작 시점(before_msgs)에 이미 있던 내 메시지는 제외해, 내가 직접 친
+    메시지가 봇 발화로 오분류되어 말투 학습에서 빠지는 것을 막는다.
+    새로 생긴 것 중 가장 최근 sent_count개만 봇 발화로 본다(전송 창에 낀 수동 입력 방어).
+    use-self 전송이면 대상 톡방엔 새 발화가 없어 빈 리스트가 된다."""
+    if sent_count <= 0:
+        return []
+    before = {m["id"] for m in before_msgs if m.get("is_from_me")}
+    new_mine = sorted(m["id"] for m in after_msgs
+                      if m.get("is_from_me") and m["id"] not in before)
+    return new_mine[-sent_count:]
+
+
 def run_cycle(client, cfg, system_prompt, state):
     if stop_requested(cfg):
         log(cfg, "STOP", msg="STOP 파일 감지, 종료")
@@ -495,10 +509,12 @@ def run_cycle(client, cfg, system_prompt, state):
 
     if sent_count > 0:
         try:
+            # 이 사이클 시작 때 조회한 messages 를 '전송 전' 기준으로 삼아,
+            # 봇이 방금 보낸 메시지 id만 sent_ids 에 기록한다(내 기존 메시지 제외).
             after = fetch_messages(cfg.chat_id, 20)
-            for m in after:
-                if m.get("is_from_me") and m["id"] not in state["sent_ids"]:
-                    state["sent_ids"].append(m["id"])
+            for mid in bot_sent_ids(messages, after, sent_count):
+                if mid not in state["sent_ids"]:
+                    state["sent_ids"].append(mid)
             state["sent_ids"] = state["sent_ids"][-200:]
         except Exception as e:
             log(cfg, "WARN", msg=f"전송 후 재조회 실패: {e}")
