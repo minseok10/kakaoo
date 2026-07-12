@@ -2,7 +2,7 @@
 
 > 나처럼 말하는 작은 AI
 
-[kakaocli](https://github.com/silver-flight-group/kakaocli)로 카카오톡 단톡방을 폴링하면서,
+[수정판 kakaocli](https://github.com/minseok10/kakaocli/tree/local-build)로 카카오톡 단톡방을 폴링하면서,
 톡방별로 학습한 **내 말투·이름·별명·프로필**(`STYLE.md`)로 **적절한 타이밍에만** 자율 응답하는 실험용 봇.
 "언제 말하고 언제 침묵할지"와 "무슨 말투로 답할지"는 OpenRouter를 경유한 Claude가 판단하며,
 숫자 입력식 대화형 메뉴(`menu.py`)로 학습·실행·설정을 모두 다룰 수 있다.
@@ -66,13 +66,14 @@
 
 ## 📋 요구사항
 
-- **macOS** + [kakaocli](https://github.com/silver-flight-group/kakaocli)
-  (시스템 설정에서 **전체 디스크 접근 권한**과 **손쉬운 사용(접근성)** 권한 필요)
-- **Python 3.9+** — 가상환경(`python3 -m venv .venv`) 권장, 의존성은 `anthropic` 하나
-  (Homebrew 파이썬 등은 PEP 668로 `pip` 직접 설치가 막혀 있어 venv가 사실상 필수)
+- **macOS 14 이상**과 데스크톱 **카카오톡**
 - **OpenRouter API 키** — 종량제 키. https://openrouter.ai/keys 에서 발급
   (Anthropic SDK를 OpenRouter의 Anthropic 호환 엔드포인트로 라우팅해 Claude 모델을 호출한다)
-- 데스크톱 카카오톡에 로그인되어 있어야 함 (전송 시 메인 화면 상태)
+- 사용하는 터미널에 macOS **전체 디스크 접근 권한**과 **손쉬운 사용(접근성)** 권한
+
+간편 설치기는 Homebrew, Python 3.9+, SQLCipher, pkg-config를 확인하고 부족한 항목을 설치한다.
+수정판 `kakaocli`를 소스에서 빌드하므로 Xcode Command Line Tools와 Swift도 필요하다.
+Command Line Tools가 없으면 설치기가 macOS 설치 창을 열고, 설치 완료 후 같은 명령을 다시 실행하도록 안내한다.
 
 ---
 
@@ -88,6 +89,15 @@
 curl -fsSL https://raw.githubusercontent.com/minseok10/littletalker-ai/main/install.sh | sh
 ```
 
+스크립트를 먼저 확인하고 실행하려면 다음처럼 내려받아 열어볼 수 있다.
+
+```bash
+curl -fsSLo /tmp/littletalker-install.sh \
+  https://raw.githubusercontent.com/minseok10/littletalker-ai/main/install.sh
+less /tmp/littletalker-install.sh
+sh /tmp/littletalker-install.sh
+```
+
 설치가 끝난 뒤 새 터미널에서 실행한다.
 
 ```bash
@@ -96,22 +106,75 @@ littletalker
 
 처음 설치할 때 OpenRouter API 키를 묻는다. Xcode Command Line Tools가 없는 경우에는
 macOS 설치 창을 완료한 뒤 위 명령을 한 번 더 실행하면 된다. 같은 명령을 다시 실행하면
-LittleTalker AI와 수정판 `kakaocli`가 최신 브랜치 내용으로 갱신된다.
+LittleTalker AI의 `main`과 수정판 `kakaocli`의 `local-build` 최신 내용으로 갱신된다.
+기존 `.env`와 `rooms/` 데이터는 그대로 보존된다.
+
+설치되는 위치는 다음과 같다.
+
+```text
+~/.local/share/littletalker-ai/
+├── app/                 LittleTalker AI 코드, .env, rooms 데이터
+├── src/kakaocli/        local-build 소스
+├── bin/kakaocli         LittleTalker 전용 수정판 바이너리
+└── venv/                전용 Python 가상환경
+~/.local/bin/littletalker  대화형 메뉴 실행 명령
+```
+
+> 설치 폴더의 추적 대상 소스 파일을 직접 수정하면 다음 업데이트 때 원격 브랜치 내용으로 교체된다.
+> 개발하려면 간편 설치 폴더가 아닌 별도의 Git clone을 사용하는 편이 안전하다.
+
+#### 최초 권한 설정
+
+1. 카카오톡 데스크톱 앱을 설치하고 로그인한다.
+2. **시스템 설정 → 개인정보 보호 및 보안 → 전체 디스크 접근 권한**에서 사용하는 터미널을 허용한다.
+3. 같은 화면의 **손쉬운 사용**에서도 해당 터미널을 허용한다.
+4. 터미널을 완전히 종료했다가 다시 열고 `littletalker`를 실행한다.
+
+전체 디스크 접근 권한은 메시지 DB를 읽는 데 필요하고, 손쉬운 사용 권한은 메시지를 전송할 때
+카카오톡 UI를 조작하는 데 필요하다. 처음에는 메뉴의 기본값인 **나와의 채팅**으로 시험하는 것을 권장한다.
+
+#### 업데이트와 삭제
+
+업데이트는 설치 명령을 그대로 다시 실행하면 된다. API 키를 바꾸려면 다음 파일을 수정한다.
+
+```bash
+nano ~/.local/share/littletalker-ai/app/.env
+```
+
+삭제하기 전에 `rooms/`에 학습 결과와 개인 대화 기반 데이터가 있다는 점을 확인한다.
+모든 데이터까지 완전히 삭제하려면 다음 명령을 사용한다.
+
+```bash
+rm -rf ~/.local/share/littletalker-ai
+rm -f ~/.local/bin/littletalker
+```
 
 ### 직접 설치
 
 ```bash
-# 1) 가상환경 + 의존성 (PEP 668 때문에 venv 권장)
+# 1) 빌드 의존성
+brew install sqlcipher pkgconf
+
+# 2) 수정판 kakaocli 빌드
+git clone --branch local-build https://github.com/minseok10/kakaocli.git
+cd kakaocli
+swift build -c release --product kakaocli
+mkdir -p ~/.local/bin
+cp .build/release/kakaocli ~/.local/bin/kakaocli
+cd ..
+
+# 3) LittleTalker AI
+git clone https://github.com/minseok10/littletalker-ai.git
+cd littletalker-ai
 python3 -m venv .venv
 .venv/bin/pip install anthropic
 
-# 2) API 키 — .env 에는 OPENROUTER_API_KEY 만 채우면 됩니다 (다른 설정은 불필요)
+# 4) API 키 — .env 에는 OPENROUTER_API_KEY만 입력
 cp .env.example .env
+nano .env
 
-# 3) 대화형 메뉴로 톡방 선택 → 학습 → 실행까지 한 곳에서
-.venv/bin/python menu.py
-#   메뉴 전송 기본값은 '나와의 채팅'이라 실제 톡방에 바로 나가지 않습니다.
-#   메뉴에서: 2) 말투 학습 으로 STYLE.md/이름·별명·프로필 생성 → 1) 봇 실행
+# 5) 대화형 메뉴
+KAKAOCLI_BIN="$HOME/.local/bin/kakaocli" .venv/bin/python menu.py
 ```
 
 > 처음엔 반드시 **dry-run**(초안만 로그) 또는 **`--use-self`**(나와의 채팅으로만 전송)로 충분히
@@ -138,7 +201,8 @@ rooms/
     STOP              있으면 이 톡방만 정지
 ```
 
-`rooms/<톡방>/` 폴더는 없으면 자동 생성된다. **개인 대화 데이터(말투·프로필·예시·로그·상태·설정)는 `.gitignore`로 커밋에서 제외**되며, 폴더 구조(`rooms/.gitkeep`)만 저장소에 올라간다.
+`rooms/`와 `rooms/<톡방>/`은 처음 학습하거나 실행할 때 자동 생성된다.
+**개인 대화 데이터(말투·프로필·예시·로그·상태·설정)는 `.gitignore`로 커밋에서 제외**된다.
 
 ---
 
@@ -272,9 +336,12 @@ rooms/
 
 | 증상 | 원인 / 해결 |
 |---|---|
+| `littletalker: command not found` | 설치 후 새 터미널을 열거나 `source ~/.zprofile` 실행. 그래도 안 되면 `~/.local/bin/littletalker`가 있는지 확인 |
+| 설치 중 `kakaocli 빌드에 실패했습니다` | macOS 소프트웨어 업데이트에서 Xcode Command Line Tools를 갱신. `swift --version`과 `xcode-select -p`도 확인. 전체 Xcode를 쓴다면 올바른 Xcode가 선택됐는지 확인 |
 | `OPENROUTER_API_KEY 가 필요합니다` | `.env`에 키를 넣었는지 확인. VS Code라면 환경변수 주입 설정 영향일 수 있음 — 셸에서 직접 실행해보기 |
 | `401 authentication_error` / `Invalid bearer token` (키는 유효한데 실패) | 환경에 `ANTHROPIC_BASE_URL`이 설정돼 있으면 SDK가 OpenRouter가 아닌 그쪽으로 요청을 보냄. `unset ANTHROPIC_BASE_URL` 후 실행하거나, 그 변수가 없는 깨끗한 셸에서 `.venv/bin/python menu.py` 실행 |
-| 전송이 안 되고 `not found in the chat list` | kakaocli가 접근성 트리에서 톡방 이름을 못 찾는 경우. 카카오톡 버전에 따라 이름이 담긴 AX 노드 식별자가 바뀜 → `kakaocli inspect`로 확인 후 kakaocli 소스(`findChatRow`) 점검 |
+| 톡방 목록을 읽지 못함 | 터미널의 전체 디스크 접근 권한을 확인하고 터미널을 완전히 재시작. 설치판 진단은 `~/.local/share/littletalker-ai/bin/kakaocli chats`로 가능 |
+| 전송이 안 되고 `not found in the chat list` | kakaocli가 접근성 트리에서 톡방 이름을 못 찾는 경우. 카카오톡 버전에 따라 이름이 담긴 AX 노드 식별자가 바뀔 수 있음. 설치판의 전용 바이너리인지 확인하고 이슈에 카카오톡 버전과 증상을 첨부 |
 | 전송 시 `launching` 상태로 실패 | 카카오톡 앱이 메인(로그인) 화면이어야 함. 재로그인 후 재시도 |
 | `OverloadedError: 529` / 5xx | 업스트림(OpenRouter·Claude) 일시 과부하. 코드 버그 아님 — 자동 재시도되며 루프 모드는 다음 사이클에 복구 |
 | 읽기는 되는데 전송만 안 됨 | 전송은 UI 자동화라 **손쉬운 사용(접근성)** 권한 필요. 읽기는 **전체 디스크 접근** 권한 |
